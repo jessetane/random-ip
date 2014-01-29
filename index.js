@@ -2,63 +2,55 @@ var ip = require('ip');
 
 module.exports = randomip;
 
-function randomip(address, prefix, length) {
-  address = ip.toBuffer(address);
-  var ipv6 = address.length === 16;
-  var partsize = ipv6 ? 16 : 8;
-  prefix = prefix || 0;
+function randomip(address, start, end) {
+  var bytes = ip.toBuffer(address);
+  var ipv6 = bytes.length === 16;
+  var bytesize = 8;
 
-  if (typeof length === 'undefined') {
-    length = ipv6 ? 128 : 32;
-  }
+  start = start || 0;
+  end = typeof end !== 'undefined' ? end : bytes.length * bytesize;
 
-  // ipv6 parts are 16 bits
-  var parts = [];
-  for (var i=0; i<address.length; i++) {
-    if (ipv6) {
-      parts[i>>1] = address[i] << 8 | address[i+1];
-      i++;
-    }
-    else {
-      parts[i] = address[i];
-    }
-  }
+  for (var i = 0; i < bytes.length; i++) {
+    var bit = i * bytesize;
 
-  for (var i=0, pos=0; i<parts.length; i++, pos += partsize) {
-
-    // skip out early if not randomizing this part
-    if (pos + partsize < prefix || pos >= length) {
+    // skip if nothing to do
+    if (bit + bytesize < start || bit >= end) {
       continue;
     }
 
-    var part = parts[i];
+    var b = bytes[i];
 
     // insert random bits
-    for (var n=0; n<partsize; n++) {
-      var bit = pos + n;
-      if (bit >= prefix && bit < length) {
-        var bitpos = partsize - n - 1;
+    for (var n = 0; n < bytesize; n++) {
+      if (bit >= start && bit < end) {
+        var bitpos = bytesize - n - 1;
+        var bitmask = 1 << bitpos;
         if (Math.random() < 0.5) {
-          part |= 1 << bitpos;
+          b |= bitmask;
         }
         else {
-          part &= ~(1 << bitpos);
+          b &= ~(bitmask);
         }
       }
+      bit++;
     }
 
-    // save randomized part
-    parts[i] = part;
+    // save randomized byte
+    bytes[i] = b;
   }
 
-  // format ipv6
-  if (ipv6) {
-    for (var i=0; i<parts.length; i++) {
-      parts[i] = parts[i].toString(16);
+  // need an array for formatting
+  var tets = [];
+  for (var i = 0; i < bytes.length; i++) {
+    if (ipv6) {
+      if (i % 2 === 0) {
+        tets[i >> 1] = (bytes[i] << bytesize | bytes[i + 1]).toString(16);
+      }
     }
-    return parts.join(':')
+    else {
+      tets[i] = bytes[i];
+    }
   }
 
-  // format ipv4
-  return parts.join('.');
+  return tets.join(ipv6 ? ':' : '.');
 }
