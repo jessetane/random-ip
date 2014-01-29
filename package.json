@@ -1,6 +1,6 @@
 {
   "name": "random-ip",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "generate random ip(v4 or v6) addresses",
   "dependencies": {
     "ip": "0.2.0"
